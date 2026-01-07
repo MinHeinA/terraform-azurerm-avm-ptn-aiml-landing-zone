@@ -57,25 +57,13 @@ locals {
   subnet_ids            = length(var.vnet_definition.existing_byo_vnet) > 0 ? { for key, m in module.byo_subnets : key => try(m.resource_id, m.id) } : { for key, s in module.ai_lz_vnet[0].subnets : key => s.resource_id }
   subnets = {
     AzureBastionSubnet = {
-      enabled = var.flag_platform_landing_zone == true ? try(local.subnets_definition["AzureBastionSubnet"].enabled, true) : try(local.subnets_definition["AzureBastionSubnet"].enabled, false)
-      name    = "AzureBastionSubnet"
-      address_prefixes = (var.vnet_definition.ipam_pools == null ?
-        try(local.subnets_definition["AzureBastionSubnet"].address_prefix, null) != null ?
-        [local.subnets_definition["AzureBastionSubnet"].address_prefix] :
-        [cidrsubnet(local.vnet_address_space, 3, 5)]
-      : null)
-      ipam_pools = (var.vnet_definition.ipam_pools != null ?
-        try(local.subnets_definition["AzureBastionSubnet"].ipam_pools, null) != null ?
-        local.subnets_definition["AzureBastionSubnet"].ipam_pools :
-        [{
-          pool_id       = var.vnet_definition.ipam_pools[0].id
-          prefix_length = var.vnet_definition.ipam_pools[0].prefix_length + 3
-        }]
-      : null)
-      route_table = null
-      #network_security_group = {
-      #  id = module.nsgs.resource_id
-      #}
+      enabled          = var.flag_platform_landing_zone == true ? try(var.vnet_definition.subnets["AzureBastionSubnet"].enabled, true) : try(var.vnet_definition.subnets["AzureBastionSubnet"].enabled, false)
+      name             = "AzureBastionSubnet"
+      address_prefixes = try(var.vnet_definition.subnets["AzureBastionSubnet"].address_prefix, null) != null ? [var.vnet_definition.subnets["AzureBastionSubnet"].address_prefix] : [cidrsubnet(var.vnet_definition.address_space, 3, 5)]
+      route_table      = null
+      network_security_group = local.bastion_subnet_enabled ? {
+        id = module.bastion_nsg[0].resource_id
+      } : null
     }
     AzureFirewallSubnet = {
       enabled = var.flag_platform_landing_zone == true ? try(local.subnets_definition["AzureFirewallSubnet"].enabled, true) : try(local.subnets_definition["AzureFirewallSubnet"].enabled, false)
@@ -277,6 +265,9 @@ locals {
         (var.flag_platform_landing_zone && length(var.vnet_definition.existing_byo_vnet) > 0 && try(values(var.vnet_definition.existing_byo_vnet)[0].firewall_ip_address, null) != null)) ? {
         id = module.firewall_route_table[0].resource_id
       } : null
+      network_security_group = {
+        id = module.container_app_nsg.resource_id
+      }
     }
     PrivateEndpointSubnet = {
       enabled = true
