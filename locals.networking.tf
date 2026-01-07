@@ -150,8 +150,8 @@ locals {
       }]
     }
     APIMSubnet = {
-      enabled          = true
-      name             = try(local.subnets_definition["APIMSubnet"].name, null) != null ? local.subnets_definition["APIMSubnet"].name : "APIMSubnet"
+      enabled = true
+      name    = try(local.subnets_definition["APIMSubnet"].name, null) != null ? local.subnets_definition["APIMSubnet"].name : "APIMSubnet"
       address_prefixes = (var.vnet_definition.ipam_pools == null ?
         try(local.subnets_definition["APIMSubnet"].address_prefix, null) != null ?
         [local.subnets_definition["APIMSubnet"].address_prefix] :
