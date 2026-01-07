@@ -554,6 +554,7 @@ variable "private_dns_zones" {
       vnetid           = string
       resolutionPolicy = optional(string, "Default")
     })), {})
+    tags = optional(map(string))
   })
   default     = {}
   description = <<DESCRIPTION
@@ -565,7 +566,9 @@ Configuration object for Private DNS Zones and their network links.
   - `vnetlinkname` - The name of the virtual network link.
   - `vnetid` - The resource ID of the virtual network to link.
   - `resolutionPolicy` - (Optional) The resolution policy for the virtual network link. Default is "Default".
+- `tags` - (Optional) Map of tags to assign to the Private DNS Zones.
 DESCRIPTION
+  nullable    = false
 }
 
 variable "use_internet_routing" {
