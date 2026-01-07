@@ -150,8 +150,8 @@ locals {
       }]
     }
     APIMSubnet = {
-      enabled = true
-      name    = try(local.subnets_definition["APIMSubnet"].name, null) != null ? local.subnets_definition["APIMSubnet"].name : "APIMSubnet"
+      enabled          = true
+      name             = try(local.subnets_definition["APIMSubnet"].name, null) != null ? local.subnets_definition["APIMSubnet"].name : "APIMSubnet"
       address_prefixes = (var.vnet_definition.ipam_pools == null ?
         try(local.subnets_definition["APIMSubnet"].address_prefix, null) != null ?
         [local.subnets_definition["APIMSubnet"].address_prefix] :
@@ -165,13 +165,36 @@ locals {
           prefix_length = var.vnet_definition.ipam_pools[0].prefix_length + 4
         }]
       : null)
-      route_table = ((var.flag_platform_landing_zone && length(var.vnet_definition.existing_byo_vnet) == 0) ||
-        (var.flag_platform_landing_zone && length(var.vnet_definition.existing_byo_vnet) > 0 && try(values(var.vnet_definition.existing_byo_vnet)[0].firewall_ip_address, null) != null)) ? {
-        id = module.firewall_route_table[0].resource_id
+      route_table = anytrue([
+        var.flag_platform_landing_zone && length(var.vnet_definition.existing_byo_vnet) == 0,
+        (var.flag_platform_landing_zone && length(var.vnet_definition.existing_byo_vnet) > 0 && try(values(var.vnet_definition.existing_byo_vnet)[0].firewall_ip_address, null) != null),
+        local.apim_networking.management_return_via_internet
+        ]) ? {
+        id = module.apim_route_table[0].resource_id
       } : null
       network_security_group = {
         id = module.nsgs.resource_id
       }
+      service_endpoints_with_location = local.apim_networking.use_service_endpoints ? [
+        {
+          service   = "Microsoft.Sql"
+          locations = [var.location]
+        },
+        {
+          service   = "Microsoft.Storage"
+          locations = [var.location, local.paired_region]
+        },
+        {
+          service   = "Microsoft.KeyVault"
+          locations = [var.location]
+        }
+      ] : null
+      delegations = local.apim_networking.use_service_delegation ? [{
+        name = "APIMSubnetDelegation"
+        service_delegation = {
+          name = "Microsoft.Web/serverFarms"
+        }
+      }] : null
     }
     AIFoundrySubnet = {
       enabled = true
